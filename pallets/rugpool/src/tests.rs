@@ -1,23 +1,23 @@
-use crate::{Error, mock::*};
-use frame_support::{assert_ok, assert_noop};
+use crate::{mock::*, Error};
+use frame_support::{assert_noop, assert_ok};
 
 #[test]
-fn it_works_for_default_value() {
+fn pooling_locks_funds() {
 	new_test_ext().execute_with(|| {
-		// Dispatch a signed extrinsic.
-		assert_ok!(TemplateModule::do_something(Origin::signed(1), 42));
-		// Read pallet storage and assert an expected result.
-		assert_eq!(TemplateModule::something(), Some(42));
+		let original = Balances::free_balance(&1);
+		assert_ok!(RugPool::pool(Origin::signed(1), 10));
+		assert_eq!(Balances::usable_balance(&1), original - 10);
 	});
 }
 
 #[test]
-fn correct_error_for_none_value() {
+fn rug_can_be_pulled_once() {
 	new_test_ext().execute_with(|| {
-		// Ensure the expected error is thrown when no value is present.
+		assert_ok!(RugPool::pool(Origin::signed(1), 10));
+		assert_ok!(RugPool::pull_rug(Origin::signed(1)));
 		assert_noop!(
-			TemplateModule::cause_error(Origin::signed(1)),
-			Error::<Test>::NoneValue
+			RugPool::pull_rug(Origin::signed(1)),
+			Error::<Test>::PoolRugged
 		);
 	});
 }

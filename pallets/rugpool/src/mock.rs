@@ -1,6 +1,7 @@
 use crate as pallet_rugpool;
 use frame_support::parameter_types;
 use frame_system as system;
+use pallet_balances;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -10,7 +11,6 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-// Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -18,7 +18,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		TemplateModule: pallet_rugpool::{Module, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		RugPool: pallet_rugpool::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -45,21 +46,43 @@ impl system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
 }
 
+parameter_types! {
+	pub const ExistentialDeposit: u64 = 1;
+}
+impl pallet_balances::Config for Test {
+	type MaxLocks = ();
+	type Balance = u64;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+}
+
 impl pallet_rugpool::Config for Test {
 	type Event = Event;
+	type Currency = Balances;
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default()
+	let mut t = system::GenesisConfig::default()
 		.build_storage::<Test>()
-		.unwrap()
-		.into()
+		.unwrap();
+
+	pallet_balances::GenesisConfig::<Test> {
+		// Provide some initial balances
+		balances: vec![(1, 13), (2, 11), (3, 1), (4, 3), (5, 19)],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	t.into()
 }
